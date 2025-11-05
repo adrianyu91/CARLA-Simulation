@@ -47,7 +47,6 @@ CarlaUE4.exe
 ```
 
 ## Usage
-Usage
 
 ### 1. Navigate to the task folder:
 ```
