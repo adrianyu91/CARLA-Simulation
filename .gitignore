@@ -1,0 +1,4 @@
+plots/
+screenshots/
+__pycache__/
+*.pyc
