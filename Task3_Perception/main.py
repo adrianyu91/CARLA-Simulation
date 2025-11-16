@@ -172,18 +172,6 @@ def main():
             annotated_folder = os.path.join(base, "annotated_images")
             ensure_dir(annotated_folder)
             process_lane_images(image_folder, annotated_folder)
-
-            try:
-                annotated_img_file = sorted(os.listdir(annotated_folder))[0]
-                annotated_img_path = os.path.join(annotated_folder, annotated_img_file)
-                
-                path_x = [loc[0] for loc in location_data]
-                path_y = [loc[1] for loc in location_data]
-                
-                overlay_path_on_image(annotated_img_path, path_x, path_y,
-                                    save_path=os.path.join(output_folder, "overlay.png"))
-            except Exception as e:
-                print("Overlay failed:", e)
             print("Lane detection completed. Annotated images in:", annotated_folder)
         except Exception:
             print("Lane detection failed:")

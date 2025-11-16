@@ -40,22 +40,35 @@ def attach_camera(world, vehicle, save_folder, display):
 
 
 def attach_lidar(world, vehicle, lidar_folder):
+    # Get blueprint
     bp = world.get_blueprint_library().find('sensor.lidar.ray_cast')
-    bp.set_attribute('range', '50')
-    bp.set_attribute('rotation_frequency', '10')
-    bp.set_attribute('points_per_second', '20000')
 
-    transform = carla.Transform(carla.Location(x=0, z=2.2))
+    # Set better attributes for cleaner scans
+    bp.set_attribute('range', '50')                 # Max range in meters
+    bp.set_attribute('rotation_frequency', '10')    # Hz
+    bp.set_attribute('points_per_second', '50000')  # Higher density
+    bp.set_attribute('channels', '32')             # Vertical layers
+    bp.set_attribute('upper_fov', '10')            # Top vertical angle
+    bp.set_attribute('lower_fov', '-30')           # Bottom vertical angle
+
+    # Transform: slightly above roof, looking straight forward
+    transform = carla.Transform(carla.Location(x=0.0, y=0.0, z=2.5), carla.Rotation(pitch=0))
+
+    # Spawn sensor
     lidar = world.spawn_actor(bp, transform, attach_to=vehicle)
 
+    # Save counter
     count = {"i": 0}
 
+    # Callback function to save point clouds
     def callback(point_cloud):
         pts = np.frombuffer(point_cloud.raw_data, dtype=np.float32)
-        pts = pts.reshape((-1, 4))
+        pts = pts.reshape((-1, 4))  # x, y, z, intensity
         if count["i"] < 20:
-            np.save(f"{lidar_folder}/pc_{count['i']:03d}.npy", pts)
+            filename = os.path.join(lidar_folder, f"pc_{count['i']:03d}.npy")
+            np.save(filename, pts)
             count["i"] += 1
 
+    # Listen to LiDAR
     lidar.listen(callback)
     return lidar
