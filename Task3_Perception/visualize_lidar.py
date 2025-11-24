@@ -2,39 +2,57 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-# ----------------------------
-# Paths
-# ----------------------------
-base = os.path.dirname(os.path.abspath(__file__))
-lidar_folder = os.path.join(base, "lidar")            # where your .npy files are
-output_folder = os.path.join(base, "lidar_plots")    # where to save images
-os.makedirs(output_folder, exist_ok=True)
+def generate_lidar_plots(lidar_folder, output_folder):
+    # Make sure output folder exists
+    os.makedirs(output_folder, exist_ok=True)
 
-# ----------------------------
-# Get all LiDAR files
-# ----------------------------
-files = sorted([f for f in os.listdir(lidar_folder) if f.endswith('.npy')])
+    # Find all .npy files in lidar folder
+    files = sorted([f for f in os.listdir(lidar_folder) if f.lower().endswith('.npy')])
+    print("Looking in folder:", lidar_folder)
+    print("Found .npy files:", files)
 
-# ----------------------------
-# Loop and save plots
-# ----------------------------
-for i, file in enumerate(files):
-    file_path = os.path.join(lidar_folder, file)
-    points = np.load(file_path)
-    
-    x, y, z = points[:,0], points[:,1], points[:,2]
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(x, y, z, s=0.5, c=z, cmap='viridis')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title(file)
-    
-    # Save the plot
-    save_path = os.path.join(output_folder, f"lidar_frame_{i:02d}.png")
-    plt.savefig(save_path)
-    plt.close(fig)  # Close figure to save memory
+    if not files:
+        print("No LiDAR files found! Make sure your main script saved .npy files to this folder.")
+        return
 
-print("All LiDAR frames saved to:", output_folder)
+    # Process each LiDAR file
+    for i, file in enumerate(files):
+        file_path = os.path.join(lidar_folder, file)
+        points = np.load(file_path)
+
+        if points.size == 0:
+            print(f"File {file} is empty, skipping.")
+            continue
+
+        x = points[:, 0]
+        y = points[:, 1]
+        z = points[:, 2]
+
+        mask = (x > 0) & (x < 50) & (y > -20) & (y < 20) & (z > -1) & (z < 3)
+
+        x_filtered = x[mask]
+        y_filtered = y[mask]
+
+        # Create 2D bird's-eye view plot
+        plt.figure(figsize=(6, 6))
+        plt.scatter(x_filtered, y_filtered, s=1)
+        plt.title(f"LIDAR Bird's Eye View - {file}")
+        plt.xlabel("X (forward)")
+        plt.ylabel("Y (left/right)")
+        plt.axis("equal")
+        plt.grid(True)
+
+        # Save figure
+        save_path = os.path.join(output_folder, f"lidar_frame_{i:02d}.png")
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"Saved {save_path}")
+
+    print("All LiDAR plots saved to:", output_folder)
+
+if __name__ == "__main__":
+    base = os.path.dirname(os.path.abspath(__file__))
+    lidar_folder = os.path.join(base, "lidar")           # where your .npy files are
+    output_folder = os.path.join(base, "lidar_plots")    # where to save plots
+    generate_lidar_plots(lidar_folder, output_folder)
+    input("Press Enter to exit...")

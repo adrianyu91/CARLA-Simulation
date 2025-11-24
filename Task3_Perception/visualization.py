@@ -1,30 +1,60 @@
+import os
+import csv
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.image import imread
 
-def plot_vehicle_path(location_data, save_path="vehicle_path.png", x_min=None, x_max=None, y_padding=5):
-    xs = [loc[0] for loc in location_data]
-    ys = [loc[1] for loc in location_data]
+# -----------------------------
+# Paths
+# -----------------------------
+base_folder = os.getcwd()  # Adjust if needed
+csv_path = os.path.join(base_folder, "outputs", "vehicle_path.csv")
+bev_image_path = os.path.join(base_folder, "outputs", "birds_eye_view.png")
+output_plot_path = os.path.join(base_folder, "outputs", "vehicle_path_on_bev.png")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(ys, xs, linewidth=2)
-    plt.xlabel("X Position")
-    plt.ylabel("Y Position")
-    plt.title("Vehicle Path")
-    plt.grid(True)
+# -----------------------------
+# Load vehicle path from CSV
+# -----------------------------
+x_list, y_list = [], []
 
-    # Set custom X-axis limits
-    if x_min is None:
-        x_min = min(ys) - 10
-    if x_max is None:
-        x_max = max(ys) + (max(ys) - min(ys)) * 0.2  # extend 20% beyond max
-    plt.xlim(x_min, x_max)
+with open(csv_path, "r") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        x_list.append(float(row["x"]))
+        y_list.append(float(row["y"]))
 
-    # Compress Y-axis relative to X-axis
-    ax = plt.gca()
-    ax.set_aspect(0.3)  # compress Y relative to X
+x_list = np.array(x_list)
+y_list = np.array(y_list)
 
-    # Expand Y-axis limits a bit so more range is visible
-    y_min, y_max = min(xs), max(xs)
-    ax.set_ylim(y_min - y_padding, y_max + y_padding)
+# Swap X and Y for correct orientation
+x_plot = y_list
+y_plot = x_list
 
-    plt.savefig(save_path)
-    plt.close()
+# -----------------------------
+# Load bird's-eye view image
+# -----------------------------
+bev_img = imread(bev_image_path)
+
+# -----------------------------
+# Plot vehicle path on top
+# -----------------------------
+plt.figure(figsize=(10, 10))
+y_offset = -2.0  # negative to shift down, tweak as needed
+
+plt.imshow(
+    bev_img, 
+    extent=[x_plot.min()-5, x_plot.max()+5, y_plot.min()-5 + y_offset, y_plot.max()+5 +y_offset]
+)
+plt.plot(x_plot, y_plot, marker='o', markersize=4, color='red', label='Vehicle Path')
+
+plt.xlabel("X (forward)")
+plt.ylabel("Y (left/right)")
+plt.title("Vehicle Path on Bird's Eye View")
+plt.axis("equal")
+plt.grid(True)
+plt.legend()
+
+plt.savefig(output_plot_path, dpi=300)
+plt.show()
+
+print("Vehicle path plot saved to:", output_plot_path)

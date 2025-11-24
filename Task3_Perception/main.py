@@ -9,7 +9,7 @@ import carla
 from sensors import attach_camera, attach_lidar
 from utils import ensure_dir
 from lane_detection import process_lane_images
-from visualization import plot_vehicle_path
+from visualize_lidar import generate_lidar_plots
 
 def main():
     # ------------------------
@@ -50,7 +50,7 @@ def main():
     # ------------------------
     # Attach Sensors
     # ------------------------
-    camera = attach_camera(world, vehicle, image_folder, display)
+    camera = attach_camera(world, vehicle, base, display)
     lidar = attach_lidar(world, vehicle, lidar_folder)
 
     # ------------------------
@@ -182,7 +182,6 @@ def main():
         # ------------------------
         try:
             path_plot_path = os.path.join(output_folder, "vehicle_path.png")
-            plot_vehicle_path(location_data, save_path=path_plot_path)
             print("Vehicle path plot saved:", path_plot_path)
         except Exception:
             print("Vehicle path plot failed:")
