@@ -147,6 +147,7 @@ def detect_lanes(img, return_binary=False):
 
 #Global variables for lane center estimation
 lane_center_history = []
+MAX_LANE_CENTER_JUMP = 50
 
 
 def estimate_lane_center(binary_lane_img, lane_coords=None):
@@ -155,6 +156,7 @@ def estimate_lane_center(binary_lane_img, lane_coords=None):
     roi = binary_lane_img[h//2:, :]
     ys, xs = np.where(roi > 0)
     
+    # No lanes detected
     if len(xs) < 50:
         if len(lane_center_history) > 0:
             return int(np.mean(lane_center_history))
@@ -164,16 +166,28 @@ def estimate_lane_center(binary_lane_img, lane_coords=None):
     left_xs = xs[xs < frame_center]
     right_xs = xs[xs > frame_center]
     
-    # Need reasonable number of pixels on each side
+    # Calculate new center
     if len(left_xs) > 30 and len(right_xs) > 30:
-        lane_center = int((np.mean(left_xs) + np.mean(right_xs)) / 2)
+        new_lane_center = int((np.mean(left_xs) + np.mean(right_xs)) / 2)
+        
+        # REJECT UNREALISTIC JUMPS
+        if len(lane_center_history) > 0:
+            last_center = int(np.mean(lane_center_history))
+            jump = abs(new_lane_center - last_center)
+            if jump > MAX_LANE_CENTER_JUMP:
+                print(f"WARNING: Lane center jumped {jump}px, using last valid center")
+                return last_center  # Use last valid instead of bad detection
+        
+        lane_center = new_lane_center
     elif len(lane_center_history) > 0:
+        # Fallback to history
         lane_center = int(np.mean(lane_center_history))
     else:
         return frame_center
     
+    # Add to history with longer buffer
     lane_center_history.append(lane_center)
-    if len(lane_center_history) > 10:
+    if len(lane_center_history) > 20:  # Increased from 10
         lane_center_history.pop(0)
     
     return int(np.mean(lane_center_history))

@@ -5,7 +5,7 @@ import numpy as np
 class PDController:
     """PD Controller with temporal smoothing and rate limiting for stable lane keeping."""
     
-    def __init__(self, Kp=0.0002, Kd=0.0005, smoothing_window=20, max_steering_change=0.02):
+    def __init__(self, Kp=0.0025, Kd=0.0008, smoothing_window=20, max_steering_change=0.02):
         self.Kp = Kp
         self.Kd = Kd
         self.smoothing_window = smoothing_window

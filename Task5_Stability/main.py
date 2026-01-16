@@ -46,8 +46,17 @@ def main():
     camera = attach_camera(world, vehicle, base)
     lidar = attach_lidar(world, vehicle, lidar_folder)
 
-    # Controller
-    controller = PDController(Kp=0.005, Kd=0.002, smoothing_window=10, max_steering_change=0.05)
+    # Controller - conservative settings
+    controller = PDController(
+        Kp=0.0015,
+        Kd=0.0,
+        smoothing_window=25,
+        max_steering_change=0.015
+    )
+
+    # Detection quality tracking
+    failed_detection_count = 0
+    MAX_FAILED_DETECTIONS = 10
 
     clock = pygame.time.Clock()
     running = True
@@ -61,20 +70,34 @@ def main():
                 
                 if lane_center is None:
                     lane_center = frame.shape[1] // 2
+                    failed_detection_count += 1
+                else:
+                    failed_detection_count = max(0, failed_detection_count - 1)
+                
+                # Gradual slowdown when detection is bad
+                if failed_detection_count > MAX_FAILED_DETECTIONS:
+                    throttle = 0.45
+                    print("WARNING: Poor lane detection, slowing down")
+                else:
+                    throttle = 0.5
+                
+                steer = controller.get_steering(lane_center, frame.shape[1])
+                
+                # Reduce steering aggressiveness when uncertain
+                if failed_detection_count > 5:
+                    steer *= 0.7
 
                 error = lane_center - frame.shape[1] // 2
-                steer = controller.get_steering(lane_center, frame.shape[1])
-
-                # Debug prints
-                print(f"Lane center: {lane_center}, Error: {error}, Steer: {steer:.3f}, Non-zero lane pixels: {np.count_nonzero(binary_lane)}")
+                print(f"Lane center: {lane_center}, Error: {error}, Steer: {steer:.3f}, Failed: {failed_detection_count}")
 
             else:
                 annotated = np.zeros((600, 800, 3), dtype=np.uint8)
                 steer = 0.0
+                throttle = 0.0
 
             # Apply control
             control = carla.VehicleControl()
-            control.throttle = 0.5
+            control.throttle = throttle
             control.steer = steer
             vehicle.apply_control(control)
 
